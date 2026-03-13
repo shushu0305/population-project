@@ -1,0 +1,33 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# ── Data files ────────────────────────────────────────────────────────────────
+# AADR is large and subject to its own license — users download it separately.
+data/aadr/
+
+# Tree files, VIP list, and alias table are small and included in the repo.
+!data/trees/
+!data/vip/
+!data/y_aliases.tsv
+
+# ── Environment variables ─────────────────────────────────────────────────────
+.env
+
+# ── Output directory ──────────────────────────────────────────────────────────
+output/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
