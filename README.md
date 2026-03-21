@@ -78,10 +78,9 @@ haplogroup-discover/
 │   └── export_y_aliases.py # Y-DNA alias export tool
 │
 └── data/
-    ├── aadr/               # ⚠ Not included — download separately (see above)
+    ├── aadr/               # AADR dataset (included)
     ├── trees/              # Phylogenetic tree files (included)
     ├── vip/                # VIP haplogroup list (included)
-    └── y_aliases.tsv       # Y-DNA label mapping table (included)
 ```
 
 ---
