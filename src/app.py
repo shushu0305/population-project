@@ -7,18 +7,16 @@ from urllib.parse import quote
 import pandas as pd
 import requests
 import streamlit as st
+import plotly.express as px
 
-import sys, os
-sys.path.insert(0, os.path.dirname(__file__))
-from config import DATA_CONFIG
 from service import run_haplogroup_analysis
 
 # ---------- Internal config ----------
-AADR_PATH     = DATA_CONFIG["AADR_PATH"]
-VIP_PATH      = DATA_CONFIG["VIP_PATH"]
-MT_TREE_PATH  = DATA_CONFIG["MT_TREE_PATH"]
-Y_TREE_PATH   = DATA_CONFIG["Y_TREE_PATH"]
-EARLY_N       = DATA_CONFIG["EARLY_N"]
+AADR_PATH = "../data/aadr/AADR Annotations 2025.xlsx"
+VIP_PATH = "../data/vip/VIPHaplogroups.xlsx"
+MT_TREE_PATH = "../data/trees/mt_phyloTree_b17_Tree2.txt"
+Y_TREE_PATH = "../data/trees/chrY_hGrpTree_isogg2016.txt"
+EARLY_N = 5
 PREVIEW_VIP_COUNT = 8
 
 st.set_page_config(page_title="Haplogroup Discover", page_icon="🧬", layout="wide")
@@ -104,6 +102,26 @@ html, body, [class*="css"] {
     background: #fffaf1;
     box-shadow: 0 2px 8px rgba(183,121,31,0.08);
 }
+.vip-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 15px;
+}
+.vip-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gold-bg);
+    color: var(--gold);
+    font-size: 14px;
+    flex: 0 0 auto;
+}
 .vip-sub {margin-top: 6px; color: var(--muted); font-size: 13px;}
 .vip-hg-mini {
     margin-top: 6px;
@@ -163,12 +181,14 @@ html, body, [class*="css"] {
 .branch-label {font-size:12px; color: var(--muted); margin-top: 8px; text-align:center;}
 
 .show-more-wrap {margin: 4px 0 14px;}
-button[kind="secondary"] {border-radius: 999px !important;}
+
+button[kind="secondary"] {
+    border-radius: 999px !important;
+}
 </style>
 """,
     unsafe_allow_html=True,
 )
-
 
 # ---------- Helpers ----------
 def safe_text(v) -> str:
@@ -180,20 +200,131 @@ def safe_text(v) -> str:
     return str(v) if v is not None else "—"
 
 
-def prettify_relation(raw_relation: object, query_hg: str, vip_hg: str) -> str:
-    text = ""
-    if raw_relation is not None:
-        text = str(raw_relation).strip()
 
-    if text and text not in {"—", "nan", "None"}:
-        return text.replace("_", " ").replace("-", " ").title()
 
-    query_hg = safe_text(query_hg)
-    vip_hg = safe_text(vip_hg)
+def get_query_name_labels(result) -> dict:
+    system_label = "Y-DNA" if result.system == "y" else "mtDNA"
+    terminal_name = safe_text(result.target)
+    tree_name = safe_text(getattr(result, "resolved_target_for_tree", None))
 
-    if query_hg == vip_hg:
-        return "Same clade"
-    return "Related branch"
+    if result.system != "y":
+        return {
+            "system_label": system_label,
+            "terminal_name": terminal_name,
+            "isogg_name": terminal_name,
+            "display_name": terminal_name,
+        }
+
+    if tree_name in {"—", "", terminal_name}:
+        tree_name = terminal_name
+
+    return {
+        "system_label": system_label,
+        "terminal_name": terminal_name,
+        "isogg_name": tree_name,
+        "display_name": f"{terminal_name} · {tree_name}",
+    }
+
+
+def format_y_haplogroup_pair(terminal_name: object, isogg_name: object) -> str:
+    terminal_name = safe_text(terminal_name)
+    isogg_name = safe_text(isogg_name)
+    if isogg_name in {"—", "", terminal_name}:
+        return terminal_name
+    return f"Terminal: {terminal_name} | ISOGG: {isogg_name}"
+
+
+def add_haplogroup_display_columns(df: pd.DataFrame, system: str) -> pd.DataFrame:
+    if df is None or df.empty:
+        return df
+
+    out = df.copy()
+
+    if system == "y":
+        if "y_haplogroup" in out.columns or "y_haplogroup_isogg" in out.columns:
+            out["haplogroup_display"] = [
+                format_y_haplogroup_pair(
+                    row.get("y_haplogroup"),
+                    row.get("y_haplogroup_isogg"),
+                )
+                for _, row in out.iterrows()
+            ]
+    else:
+        if "mt_haplogroup" in out.columns:
+            out["haplogroup_display"] = out["mt_haplogroup"].fillna("—").astype(str)
+
+    return out
+
+
+
+COUNTRY_NAME_FIXES = {
+    "United States of America": "United States",
+    "Russian Federation": "Russia",
+    "Czech Republic": "Czechia",
+    "Türkiye": "Turkey",
+}
+
+
+def get_core_sample_columns(df: pd.DataFrame, system: str) -> pd.DataFrame:
+    if df is None or df.empty:
+        return df
+    df = add_haplogroup_display_columns(df, system)
+    core_cols = [
+        "sample_id",
+        "haplogroup_display",
+        "date_mean_bp",
+        "political_entity",
+        "locality",
+        "publication",
+    ]
+    available = [c for c in core_cols if c in df.columns]
+    if not available:
+        return df
+    return df[available].copy()
+
+
+def render_origin_map(country_summary: pd.DataFrame):
+    if country_summary is None or country_summary.empty:
+        st.info("No geographic data available for map visualization.")
+        return
+
+    df = country_summary.copy()
+    required_cols = {"political_entity", "sample_count", "oldest_bp"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        st.warning(f"Map could not be generated. Missing columns: {', '.join(sorted(missing))}")
+        return
+
+    df["political_entity"] = df["political_entity"].astype(str).replace(COUNTRY_NAME_FIXES)
+    df["sample_count"] = pd.to_numeric(df["sample_count"], errors="coerce").fillna(0)
+    df["oldest_bp"] = pd.to_numeric(df["oldest_bp"], errors="coerce")
+
+    fig = px.choropleth(
+        df,
+        locations="political_entity",
+        locationmode="country names",
+        color="sample_count",
+        hover_name="political_entity",
+        hover_data={
+            "sample_count": True,
+            "oldest_bp": True,
+            "political_entity": False,
+        },
+        color_continuous_scale="YlOrBr",
+    )
+
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=10, b=0),
+        coloraxis_colorbar_title="Sample count",
+        geo=dict(
+            showframe=False,
+            showcoastlines=True,
+            projection_type="equirectangular",
+            bgcolor="rgba(0,0,0,0)",
+        ),
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 
 @st.cache_data(show_spinner=False)
@@ -283,19 +414,33 @@ def render_metric_card(label: str, value: str):
     )
 
 
-def render_branch_tree(common_ancestor: str, query_hg: str, vip_hg: str, vip_name: str):
+def render_branch_tree(
+    common_ancestor: str,
+    query_hg: str,
+    vip_hg: str,
+    vip_name: str,
+    query_terminal: str | None = None,
+    query_isogg: str | None = None,
+):
     common_ancestor = safe_text(common_ancestor)
     query_hg = safe_text(query_hg)
     vip_hg = safe_text(vip_hg)
     vip_name = safe_text(vip_name)
+    query_terminal = safe_text(query_terminal or query_hg)
+    query_isogg = safe_text(query_isogg or query_hg)
+    query_label = (
+        escape(query_terminal)
+        if query_terminal == query_isogg
+        else f"{escape(query_terminal)}<br><span style=\"font-size:12px;color:#6b7280;\">ISOGG: {escape(query_isogg)}</span>"
+    )
 
     if query_hg == vip_hg:
         html = f"""
         <div class="branch-tree">
             <div class="branch-title">Haplogroup lineage</div>
             <div class="branch-wrap">
-                <div class="branch-node same"><span>◎</span><span>{escape(query_hg)}</span></div>
-                <div class="branch-label">Query haplogroup and {escape(vip_name)} are the same clade</div>
+                <div class="branch-node same"><span>◎</span><span>{escape(query_terminal)}</span></div>
+                <div class="branch-label">Terminal: {escape(query_terminal)}<br>ISOGG: {escape(query_isogg)}<br>Query haplogroup and {escape(vip_name)} are the same clade</div>
             </div>
         </div>
         """
@@ -310,8 +455,8 @@ def render_branch_tree(common_ancestor: str, query_hg: str, vip_hg: str, vip_nam
                 <div class="branch-children">
                     <div class="branch-child">
                         <div class="branch-child-line"></div>
-                        <div class="branch-node query"><span>⌘</span><span>{escape(query_hg)}</span></div>
-                        <div class="branch-label">Query clade</div>
+                        <div class="branch-node query"><span>⌘</span><span>{escape(query_terminal)}</span></div>
+                        <div class="branch-label">Terminal: {escape(query_terminal)}<br>ISOGG: {escape(query_isogg)}</div>
                     </div>
                     <div class="branch-child">
                         <div class="branch-child-line"></div>
@@ -326,7 +471,7 @@ def render_branch_tree(common_ancestor: str, query_hg: str, vip_hg: str, vip_nam
 
 
 # ---------- Header ----------
-st.markdown('<div class="hero-title">Haplogroup Discover</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-title"> Haplogroup Discover</div>', unsafe_allow_html=True)
 st.markdown(
     '<div class="hero-sub">Enter an mtDNA or Y-DNA haplogroup to explore the earliest ancient samples, inferred origin, and notable individuals.</div>',
     unsafe_allow_html=True,
@@ -374,21 +519,39 @@ early_samples = result.early_samples
 country_summary = result.country_summary
 vip_matches = result.vip_matches
 system_label = "Y-DNA" if result.system == "y" else "mtDNA"
+name_info = get_query_name_labels(result)
 
 # ---------- Hero/result section ----------
-st.subheader(f"{result.target} · {system_label}")
+if result.system == "y":
+    st.subheader(f"{name_info['terminal_name']} · {system_label}")
+    st.markdown(
+        f"""
+        <div class="plain-card" style="margin-bottom:16px;">
+            <div class="eyebrow">Haplogroup naming</div>
+            <div class="kv-row"><span class="kv-key">Terminal name</span><span>{escape(name_info['terminal_name'])}</span></div>
+            <div class="kv-row"><span class="kv-key">ISOGG name</span><span>{escape(name_info['isogg_name'])}</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.subheader(f"{result.target} · {system_label}")
 hero_left, _ = st.columns([1.2, 1])
 
 with hero_left:
     if not oldest_sample.empty:
         row = oldest_sample.iloc[0]
-        hg_value = row.get("y_haplogroup") if result.system == "y" else row.get("mt_haplogroup")
         st.markdown(
             f"""
             <div class="hero-card">
                 <div class="eyebrow">Earliest observed ancient sample</div>
                 <div class="hero-sample-id">{escape(safe_text(row.get('sample_id')))}</div>
-                <div class="kv-row"><span class="kv-key">Haplogroup</span><span>{escape(safe_text(hg_value))}</span></div>
+                {
+                    f'<div class="kv-row"><span class="kv-key">Terminal name</span><span>{escape(safe_text(row.get("y_haplogroup")))}</span></div>'
+                    f'<div class="kv-row"><span class="kv-key">ISOGG name</span><span>{escape(safe_text(row.get("y_haplogroup_isogg")))}</span></div>'
+                    if result.system == "y"
+                    else f'<div class="kv-row"><span class="kv-key">Haplogroup</span><span>{escape(safe_text(row.get("mt_haplogroup")))}</span></div>'
+                }
                 <div class="kv-row"><span class="kv-key">Date</span><span>{escape(safe_text(row.get('date_mean_bp')))} BP</span></div>
                 <div class="kv-row"><span class="kv-key">Country</span><span>{escape(safe_text(row.get('political_entity')))}</span></div>
                 <div class="kv-row"><span class="kv-key">Locality</span><span>{escape(safe_text(row.get('locality')))}</span></div>
@@ -423,6 +586,11 @@ with tab1:
         st.markdown("#### Query info")
         st.write("**Target:**", result.target)
         st.write("**System:**", system_label)
+        if result.system == "y":
+            st.write("**Terminal name:**", name_info["terminal_name"])
+            st.write("**ISOGG name:**", name_info["isogg_name"])
+        else:
+            st.write("**Haplogroup name:**", name_info["terminal_name"])
         st.write("**Resolved target for tree:**", safe_text(result.resolved_target_for_tree))
         st.write("**Direct upstream:**", safe_text(result.upstream_label))
         st.write("**Included labels count:**", len(result.included_labels))
@@ -441,14 +609,18 @@ with tab1:
         )
 
 with tab2:
+    oldest_sample_display = get_core_sample_columns(oldest_sample, result.system)
+    early_samples_display = get_core_sample_columns(early_samples, result.system)
+    matched_samples_display = get_core_sample_columns(matched_samples, result.system)
+
     st.markdown("#### Oldest sample")
-    st.dataframe(oldest_sample, use_container_width=True, hide_index=True)
+    st.dataframe(oldest_sample_display, use_container_width=True, hide_index=True)
 
     st.markdown("#### Early samples")
-    st.dataframe(early_samples, use_container_width=True, hide_index=True)
+    st.dataframe(early_samples_display, use_container_width=True, hide_index=True)
 
     st.markdown("#### All matched samples")
-    st.dataframe(matched_samples, use_container_width=True, hide_index=True)
+    st.dataframe(matched_samples_display, use_container_width=True, hide_index=True)
 
     if not matched_samples.empty:
         st.download_button(
@@ -459,14 +631,28 @@ with tab2:
         )
 
 with tab3:
-    st.markdown("#### Country summary")
-    st.dataframe(country_summary, use_container_width=True, hide_index=True)
-
     st.markdown("#### Candidate origin")
     if result.candidate_origin_country:
         st.success(f"Candidate origin country: **{result.candidate_origin_country}**")
     else:
         st.warning("Insufficient data to infer a candidate origin country.")
+
+    st.info(
+        "Origin is inferred from the geographic distribution of the earliest matched ancient samples. "
+        "The map below shows where those early samples are concentrated."
+    )
+
+    st.markdown("#### Geographic distribution of early samples")
+    render_origin_map(country_summary)
+
+    st.markdown("#### Country summary")
+    st.dataframe(country_summary, use_container_width=True, hide_index=True)
+
+    if not country_summary.empty:
+        st.caption(
+            "Darker shading indicates countries with more early matched samples. "
+            "Hover over a country to view sample count and oldest BP."
+        )
 
 with tab4:
     st.markdown("#### Notable People")
@@ -552,54 +738,56 @@ with tab4:
                     st.info("Select a person from the list to view details.")
                 else:
                     row = display_df.loc[sel_idx]
-
                     vip_name = safe_text(row.get("vip_name"))
                     vip_hg = safe_text(row.get("vip_haplogroup"))
                     common_ancestor = safe_text(row.get("common_ancestor"))
-                    relation = prettify_relation(row.get("relation"), result.target, vip_hg)
+                    relation = safe_text(row.get("relation"))
+                    source = safe_text(row.get("source"))
+                    note = safe_text(row.get("note"))
 
                     wiki = fetch_wikipedia_intro(vip_name)
                     wiki_title = safe_text(wiki.get("title"))
                     wiki_extract = safe_text(wiki.get("extract"))
                     wiki_url = wiki.get("page_url")
 
-                    st.markdown('<div class="plain-card">', unsafe_allow_html=True)
+                    if result.system == "y":
+                        st.markdown(
+                            f'''
+                            <div class="plain-card" style="margin-bottom:16px;">
+                                <div class="eyebrow">Query haplogroup naming</div>
+                                <div class="kv-row"><span class="kv-key">Terminal name</span><span>{escape(name_info["terminal_name"])}</span></div>
+                                <div class="kv-row"><span class="kv-key">ISOGG name</span><span>{escape(name_info["isogg_name"])}</span></div>
+                            </div>
+                            ''',
+                            unsafe_allow_html=True,
+                        )
 
+                    st.markdown('<div class="plain-card">', unsafe_allow_html=True)
                     if wiki_url:
                         st.markdown(
                             f'<div class="vip-panel-title"><a href="{escape(wiki_url)}" target="_blank" style="color:inherit;text-decoration:none;">{escape(wiki_title)}</a></div>',
                             unsafe_allow_html=True,
                         )
                     else:
-                        st.markdown(
-                            f'<div class="vip-panel-title">{escape(wiki_title or vip_name)}</div>',
-                            unsafe_allow_html=True,
-                        )
+                        st.markdown(f'<div class="vip-panel-title">{escape(wiki_title or vip_name)}</div>', unsafe_allow_html=True)
 
-                    st.markdown(
-                        f'<div class="vip-panel-hg">{escape(vip_hg)}</div>',
-                        unsafe_allow_html=True,
-                    )
-
-                    st.markdown(
-                        f'<div class="vip-bio">{escape(wiki_extract)}</div>',
-                        unsafe_allow_html=True,
-                    )
+                    st.markdown(f'<div class="vip-panel-hg">{escape(vip_hg)}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="vip-bio">{escape(wiki_extract)}</div>', unsafe_allow_html=True)
 
                     st.markdown(
                         f"""
                         <div class="meta-grid">
-                            <div class="meta-k">Relationship</div>
-                            <div class="meta-v">{escape(relation)}</div>
-                            <div class="meta-k">Common ancestor</div>
-                            <div class="meta-v">{escape(common_ancestor)}</div>
+                            <div class="meta-k">Relation to query</div><div class="meta-v">{escape(relation)}</div>
+                            <div class="meta-k">Common ancestor</div><div class="meta-v">{escape(common_ancestor)}</div>
+                            <div class="meta-k">Source</div><div class="meta-v">{escape(source)}</div>
+                            <div class="meta-k">Note</div><div class="meta-v">{escape(note)}</div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
-
                     st.markdown("</div>", unsafe_allow_html=True)
-                    render_branch_tree(common_ancestor, result.target, vip_hg, vip_name)
+
+                    render_branch_tree(common_ancestor, result.target, vip_hg, vip_name, name_info["terminal_name"], name_info["isogg_name"])
 
             st.download_button(
                 "Download VIP results CSV",
