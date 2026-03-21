@@ -11,7 +11,8 @@ Given an mtDNA or Y-DNA haplogroup, search the AADR ancient genomics dataset for
 - **VIP matching** — link haplogroups to notable historical figures
 - **Streamlit UI** — interactive web interface with Wikipedia integration
 - **CLI** — scriptable command-line interface for batch use
-
+![Figure description](images/haplogroup_figure_2x2.png)
+ (a) User interface for querying haplogroups based on mitochondrial DNA or Y-chromosome data. Users can input a target haplogroup to initiate analysis. (b) Summary panel displaying key results, including upstream lineage, estimated age of the oldest sample, candidate origin, number of matched samples, and notable individual matches. (c) Geographic inference of haplogroup origin based on the spatial distribution of early ancient samples, visualized through a global map. (d) Integration of historical individuals and lineage relationships, showing connections between queried haplogroups and notable figures alongside their phylogenetic positions
 ---
 
 ## Quick start
