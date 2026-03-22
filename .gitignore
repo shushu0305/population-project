@@ -10,8 +10,7 @@ dist/
 build/
 
 # ── Data files ────────────────────────────────────────────────────────────────
-# AADR is large and subject to its own license — users download it separately.
-data/aadr/
+!data/aadr/
 
 # Tree files, VIP list, and alias table are small and included in the repo.
 !data/trees/
