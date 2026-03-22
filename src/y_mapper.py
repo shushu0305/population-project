@@ -1,3 +1,25 @@
+"""
+y_mapper.py
+-----------
+Y-DNA label resolution utilities.
+
+Y-chromosome haplogroup labels exist in two incompatible formats:
+
+* **Terminal SNP format** (used in AADR):  e.g. ``R-M269``, ``I-M253``
+* **ISOGG hierarchical format** (used in the 2016 tree):  e.g. ``R1b1a1``, ``I1``
+
+This module bridges the two formats through a four-step resolution pipeline
+(see :func:`resolve_y_label_for_tree`) and provides helpers for normalisation
+and bidirectional mapping.
+
+Key functions
+~~~~~~~~~~~~~
+normalize_y_label(label)                        — strip noise, return clean str
+load_y_aliases(path)                            — load the alias TSV table
+build_y_mapping_from_aadr(aadr_df)             — build terminal↔ISOGG dicts
+resolve_y_label_for_tree(label, tree, ...)      — resolve any Y label to tree node
+convert_tree_labels_to_aadr_terminal(labels, ...)— reverse: tree → AADR format
+"""
 from __future__ import annotations
 
 from pathlib import Path

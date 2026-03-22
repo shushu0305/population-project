@@ -1,3 +1,22 @@
+"""
+main.py
+-------
+Command-line interface (CLI) entry point for Haplogroup Discover.
+
+Usage examples
+~~~~~~~~~~~~~~
+# mtDNA query, print results to terminal
+python main.py --system mt --target U5b2c \\
+    --aadr "../data/aadr/AADR Annotations 2025.xlsx"
+
+# Y-DNA query with VIP matching, save output tables and report
+python main.py --system y --target R-M269 \\
+    --aadr "../data/aadr/AADR Annotations 2025.xlsx" \\
+    --vip ../data/vip/VIPHaplogroups.xlsx \\
+    --early-n 10 --save
+
+Run with -h / --help for a full argument reference.
+"""
 from __future__ import annotations
 
 import argparse

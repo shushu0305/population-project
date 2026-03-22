@@ -1,3 +1,22 @@
+"""
+analysis_vip.py
+---------------
+VIP (notable individuals) matching analysis.
+
+This module mirrors the structure of :mod:`analysis_origin` but focuses
+entirely on linking the query haplogroup to historical VIP individuals.
+It is run alongside the origin analyser; their outputs are merged by
+:func:`service.combine_results`.
+
+For Y-DNA queries, VIP haplogroups are resolved to tree nodes before matching
+so that relationships are determined via tree traversal rather than string
+prefix heuristics alone.
+
+Classes
+~~~~~~~
+HaplogroupAnalysisResult  — dataclass (identical to the one in analysis_origin).
+HaplogroupAnalyzer        — stateful analyser; call ``analyze()`` to run.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass

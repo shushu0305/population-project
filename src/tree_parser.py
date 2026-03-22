@@ -1,3 +1,18 @@
+"""
+tree_parser.py
+--------------
+Phylogenetic tree loader and in-memory graph for haplogroup traversal.
+
+Reads plain-text tree files in ``child parent`` format (one edge per line),
+as used by PhyloTree (mtDNA) and the ISOGG Y-chromosome tree.  Provides
+ancestor / descendant queries, relationship classification, and BFS traversal
+used by the analysis modules.
+
+Classes
+~~~~~~~
+Edge       — frozen dataclass representing a directed parent→child edge.
+PhyloTree  — the main tree object; call ``load()`` before any queries.
+"""
 from __future__ import annotations
 
 from collections import defaultdict, deque

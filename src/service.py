@@ -1,3 +1,18 @@
+"""
+service.py
+----------
+Analysis pipeline orchestrator used by the Streamlit web interface.
+
+This module is the single entry point for ``app.py``.  It loads all data
+sources, instantiates both analyser objects, runs them, and merges their
+outputs into one result namespace.
+
+The CLI (``main.py``) contains equivalent logic but wires up argparse on top.
+
+Exported function
+~~~~~~~~~~~~~~~~~
+run_haplogroup_analysis(system, target, aadr_path, ...) -> SimpleNamespace
+"""
 from types import SimpleNamespace
 
 from aadr_parser import load_aadr_table

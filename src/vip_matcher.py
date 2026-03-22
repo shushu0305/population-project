@@ -1,3 +1,19 @@
+"""
+vip_matcher.py
+--------------
+Haplogroup relationship classifier and VIP matching engine.
+
+Given a query haplogroup and a VIP DataFrame, this module determines whether
+each VIP's haplogroup is *exact*, *upstream*, *downstream*, or *related* with
+respect to the query.  Results are sorted by relationship closeness.
+
+Key functions
+~~~~~~~~~~~~~
+normalize_haplogroup_label(label)               — strip noise characters
+classify_relationship(target, vip_hg, tree, system) — single-pair relation
+find_common_ancestor(node_a, node_b, tree)      — nearest shared ancestor
+match_vips_for_target(vip_df, target, system, tree, ...) — full VIP scan
+"""
 from __future__ import annotations
 
 from typing import Optional

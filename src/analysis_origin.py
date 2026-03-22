@@ -1,3 +1,22 @@
+"""
+analysis_origin.py
+------------------
+Ancient sample search, early-sample selection, and geographic origin inference.
+
+This module implements the origin-focused half of the analysis pipeline.
+Given a haplogroup query, it:
+
+1. Resolves the label in the appropriate phylogenetic tree.
+2. Collects all ancestor / descendant labels for clade-wide matching.
+3. Filters the AADR dataset to matching samples.
+4. Selects the N oldest samples and infers a candidate origin country.
+5. Returns VIP matches (delegated to :mod:`vip_matcher`).
+
+Classes
+~~~~~~~
+HaplogroupAnalysisResult  — frozen dataclass holding all output fields.
+HaplogroupAnalyzer        — stateful analyser; call ``analyze()`` to run.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass

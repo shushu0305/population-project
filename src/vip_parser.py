@@ -1,3 +1,18 @@
+"""
+vip_parser.py
+-------------
+Loader and column normaliser for the VIP (notable individuals) dataset.
+
+The VIP Excel file may contain separate sheets for Y-DNA and mtDNA, and uses
+several different column-header conventions across versions.  This module
+normalises all variants, infers the genetic system from the sheet name or
+haplogroup label when not explicitly provided, and returns a clean DataFrame
+ready for use by :mod:`vip_matcher`.
+
+Exported function
+~~~~~~~~~~~~~~~~~
+load_vip_table(file_path, sheet_name) -> pd.DataFrame
+"""
 from __future__ import annotations
 
 from pathlib import Path

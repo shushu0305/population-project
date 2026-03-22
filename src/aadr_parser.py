@@ -1,3 +1,17 @@
+"""
+aadr_parser.py
+--------------
+Loader and column normaliser for the Allen Ancient DNA Resource (AADR) dataset.
+
+The AADR spreadsheet uses verbose column headers that vary slightly across
+versions.  This module maps all known variants to short, consistent internal
+names and coerces column types so the rest of the pipeline never has to worry
+about raw header strings.
+
+Exported function
+~~~~~~~~~~~~~~~~~
+load_aadr_table(file_path, sep, sheet_name) -> pd.DataFrame
+"""
 from __future__ import annotations
 
 from pathlib import Path

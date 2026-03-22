@@ -38,11 +38,11 @@ def export_y_aliases(aadr_path: str, output_path: str) -> None:
         (ymap["y_haplogroup_isogg"].notna())
     ].drop_duplicates()
 
-    # 导出成 alias 表格式
+    # Export as an alias table format
     alias_df = pd.DataFrame({
         "raw_label": ymap["y_haplogroup"],
         "aadr_isogg": ymap["y_haplogroup_isogg"],
-        "tree_label": ymap["y_haplogroup_isogg"],  # 初始先等于 AADR ISOGG
+        "tree_label": ymap["y_haplogroup_isogg"],
     })
 
     alias_df = alias_df.drop_duplicates().sort_values(
