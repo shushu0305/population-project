@@ -143,19 +143,7 @@ git clone https://github.com/shushu0305/population-project.git
 cd population-project
 ```
 
-### Step 2 — (Recommended) Create a virtual environment
-
-```bash
-python -m venv .venv
-
-# On macOS/Linux:
-source .venv/bin/activate
-
-# On Windows:
-.venv\Scripts\activate
-```
-
-### Step 3 — Install dependencies
+### Step 2 — Install dependencies
 
 ```bash
 pip install -r requirements.txt
