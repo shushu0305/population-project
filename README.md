@@ -147,7 +147,6 @@ cd population-project
 
 ```bash
 pip install -r requirements.txt
-pip install plotly   # required by app.py but missing from requirements.txt
 ```
 
 ---
