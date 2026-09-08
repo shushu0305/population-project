@@ -19,6 +19,7 @@ It ships with both a **Streamlit web interface** and a **command-line interface 
 - [How to Run](#how-to-run)
 - [Common Questions (FAQ)](#common-questions-faq)
 - [Known Bugs and Limitations](#known-bugs-and-limitations)
+- [FAIR](#FAIR)
 
 ---
 
