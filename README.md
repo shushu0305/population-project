@@ -146,6 +146,7 @@ cd population-project
 
 ### Step 2 — Install dependencies
 
+I use minimum version constraints rather than exact version pinning, which makes the environment less restrictive. However, the main risk of using minimum version constraints is that future package versions, especially major releases, may introduce breaking API changes or change default behaviour. To reduce the risk, the minimum versions should be reviewed periodically.
 ```bash
 pip install -r requirements.txt
 ```
@@ -216,10 +217,21 @@ A: Years Before Present (BP), where "present" is defined as 1950 CE. A value of 
 
 ## Known Bugs and Limitations
 
-`
 
 ### 1. Origin inference is biased by sampling coverage
 The AADR dataset has far more ancient samples from Europe and the Middle East than from Africa, East Asia, or the Americas. Haplogroups with true origins outside well-sampled regions may return misleading candidate countries.
 
 ### 2. Y-DNA resolution can silently fall back to a prefix ancestor
 If a Y-DNA label is not found in the ISOGG 2016 tree (e.g. it was defined after 2016), the tool trims characters from the end of the label until a matching ancestor node is found. The resolved node is shown in the UI as "Resolved target for tree" — always check this field to confirm the resolution makes sense.
+
+
+## FAIR
+
+### Findable
+The metadata could be found by both human and computer. Metadata(AADR dataset in data folder) is registered and indexed in database(a open resources database of human DNA information)
+### Accessible
+The protocal is open, free and universally implementable. The project was uploaded in Github repository and it's public.
+### Interoperable
+Metadtata uses formal formats(csv and txt); Users not only can get results from online website, but also can download them as csv file, which can be integrated with other data, applications, or workflows.
+### Reusable
+It has clear workflow in README and LICENSE, also gives a briefly introduction on AADR and haplogroups.
